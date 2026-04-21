@@ -4,7 +4,8 @@ on:
   schedule:
   # NOTE - changes to the cron spec should be pushed by https://github.com/quic-yocto-ci
   # so that build notification emails will be sent out properly.
-  - cron: "23 23 * * *"   # daily job - pick a random "minute"  - top of hour can be busy in github
+  # At 8:22 & 20:22 UTC everyday - picked a random "minute" as top of hour can be busy in github
+  - cron: "22 8,20 * * *"
 
 permissions:
   checks: write
@@ -15,8 +16,6 @@ permissions:
 jobs:
   build-nightly:
     uses: ./.github/workflows/build-yocto.yml
-    with:
-      sdk: "1"
   test-nightly:
     uses: ./.github/workflows/test.yml
     needs: build-nightly

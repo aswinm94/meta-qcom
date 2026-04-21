@@ -7,6 +7,7 @@
 inherit kernel-arch
 
 require conf/image-fitimage.conf
+require conf/machine/include/fit-dtb-compatible.inc
 
 DEPENDS += "\
     u-boot-tools-native \
@@ -19,9 +20,7 @@ QCOMFIT_DEPLOYDIR = "${WORKDIR}/qcom_fitimage_deploy-${PN}"
 do_generate_qcom_fitimage[depends] += "qcom-dtb-metadata:do_deploy"
 do_generate_qcom_fitimage[cleandirs] += "${QCOMFIT_DEPLOYDIR}"
 python do_generate_qcom_fitimage() {
-    import sys, os, shutil, re
-    import oe.types
-    from pathlib import Path
+    import os, shutil
     from qcom.dtb_only_fitimage import QcomItsNodeRoot
 
     fit_dir = d.getVar('QCOMFIT_DEPLOYDIR')
@@ -38,29 +37,65 @@ python do_generate_qcom_fitimage() {
 
     root_node.set_extra_opts(d.getVar("FIT_DTB_MKIMAGE_EXTRA_OPTS") or "")
 
-    # Prepend qcom-metadata.dtb to KERNEL_DEVICETREE
-    kernel_devicetree = d.getVar('KERNEL_DEVICETREE') or ""
-    kernel_devicetree = ('qcom-metadata.dtb ' + kernel_devicetree).strip()
-
-    deploy_dir_image = d.getVar('DEPLOY_DIR_IMAGE') 
+    deploy_dir_image = d.getVar('DEPLOY_DIR_IMAGE')
     dtb_dir = os.path.join(d.getVar('B'), "arch", d.getVar('ARCH'), "boot", "dts", "qcom")
+    os.makedirs(fit_dir, exist_ok=True)
+
+    # Always include QCOM metadata first
     qcom_meta_src = os.path.join(deploy_dir_image, 'qcom-metadata.dtb')
     qcom_meta_dst = os.path.join(dtb_dir, 'qcom-metadata.dtb')
     shutil.copy(qcom_meta_src, qcom_meta_dst)
+    root_node.fitimage_emit_section_dtb("qcom-metadata.dtb", qcom_meta_dst, compatible_str=None, dtb_type="qcom_metadata")
 
-    for dtb in kernel_devicetree.split():
-        dtb_name = os.path.basename(dtb)
-        dtb_base = os.path.splitext(dtb_name)[0]
-        compatible = d.getVarFlag("FIT_DTB_COMPATIBLE", dtb_base) or ""
-        dtb_path = os.path.join(dtb_dir, f"{dtb_base}.dtb")
-        if not compatible and dtb_name != "qcom-metadata.dtb":
-            bb.fatal(f"FIT_DTB_COMPATIBLE[{dtb_base}] is not set. ")
-        root_node.fitimage_emit_section_dtb(
-            dtb_name, dtb_path,
-            compatible_str=compatible,
-        )
+    # KERNEL_DEVICETREE contains both .dtb and .dtbo
+    files_set = {os.path.basename(x) for x in (d.getVar('KERNEL_DEVICETREE') or "").split()}
 
-    root_node.fitimage_emit_section_config()
+    # Collect DTB/DTBO names selected in KERNEL_DEVICETREE to validate declarative FIT_DTB_COMPATIBLE combinations
+    dtb_keys_list  = {os.path.splitext(f)[0].replace(',', '_') for f in files_set}
+
+    # Parse composite compatible keys :
+    # FIT_DTB_COMPATIBLE[base+ovl1+ovl2] = "..."
+    overlay_groups  = {}
+    overlay_compats = {}
+
+    compat_flags = d.getVarFlags("FIT_DTB_COMPATIBLE") or {}
+    for key, compat_val in compat_flags.items():
+        if '+' not in key:
+            continue
+
+        parts = [os.path.basename(p) for p in key.split('+')]
+        if not parts:
+            continue
+
+        # Skip base+overlay combinations not present in KERNEL_DEVICETREE to avoid generating invalid FIT configs
+        # from declarative FIT_DTB_COMPATIBLE metadata
+        if not all(dtb in dtb_keys_list for dtb in parts):
+            continue
+
+        base = parts[0] + ".dtb"
+        overlays = [ovl + ".dtbo" for ovl in parts[1:]]
+
+        overlay_groups.setdefault(base, []).append(overlays)
+        overlay_compats[key] = compat_val
+
+    # Emit DTB/DTBO sections for every entry from KERNEL_DEVICETREE
+    for fname in files_set:
+        dtb_path = os.path.join(dtb_dir, fname)
+        if not os.path.exists(dtb_path):
+            bb.fatal(f"Required file '{fname}' not found at '{dtb_path}'.")
+
+        dtb_id = fname.replace(',', '_')
+        compatible = ""
+        if fname.endswith(".dtb"):
+            dtb_key = os.path.splitext(dtb_id)[0]
+            compatible = d.getVarFlag("FIT_DTB_COMPATIBLE", dtb_key) or ""
+            if not compatible and dtb_id not in overlay_groups:
+                bb.fatal(f"FIT_DTB_COMPATIBLE[{dtb_key}] is not set for '{fname}'.")
+
+        root_node.fitimage_emit_section_dtb(dtb_id, dtb_path, compatible_str=compatible, dtb_type="flat_dt")
+
+    # Emit configuration sections
+    root_node.fitimage_emit_section_qcomconfig(overlay_groups, overlay_compats)
 
     root_node.write_its_file(itsfile)
 
@@ -79,3 +114,4 @@ python do_generate_qcom_fitimage_setscene () {
 addtask do_generate_qcom_fitimage_setscene
 
 do_generate_qcom_fitimage[stamp-extra-info] = "${MACHINE_ARCH}"
+do_generate_qcom_fitimage[vardeps] += "FIT_DTB_COMPATIBLE"

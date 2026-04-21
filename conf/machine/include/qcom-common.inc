@@ -1,5 +1,4 @@
 require conf/machine/include/soc-family.inc
-require conf/machine/include/fit-dtb-compatible.inc
 MACHINEOVERRIDES =. "qcom:"
 
 # Set a default set of MACHINE_FEATURES, indivudual MACHINEs can append it
@@ -19,6 +18,16 @@ XSERVER ?= " \
 
 PREFERRED_PROVIDER_virtual/kernel ??= "linux-yocto"
 
+VIRTUAL-RUNTIME_qcom-capsule-firmware ?= ""
+MACHINE_EXTRA_RRECOMMENDS += "${VIRTUAL-RUNTIME_qcom-capsule-firmware}"
+
+# Device Trees specific to linux-qcom family of kernels
+LINUX_QCOM_KERNEL_DEVICETREE ??= ""
+KERNEL_DEVICETREE:append:pn-linux-qcom = " ${LINUX_QCOM_KERNEL_DEVICETREE}"
+KERNEL_DEVICETREE:append:pn-linux-qcom-next = " ${LINUX_QCOM_KERNEL_DEVICETREE}"
+KERNEL_DEVICETREE:append:pn-linux-qcom-rt = " ${LINUX_QCOM_KERNEL_DEVICETREE}"
+KERNEL_DEVICETREE:append:pn-linux-qcom-next-rt = " ${LINUX_QCOM_KERNEL_DEVICETREE}"
+
 PREFERRED_PROVIDER_android-tools-conf = "android-tools-conf-configfs"
 
 # Fastboot expects an ext4 image, which needs to be 4096 aligned
@@ -31,6 +40,9 @@ QCOM_BOOTIMG_PAGE_SIZE ?= "4096"
 
 # Default vfat sector size to 4096, compatible with UFS
 QCOM_VFAT_SECTOR_SIZE ??= "4096"
+
+# Default dtb image for the boot firmware (fit-based)
+QCOM_DTB_DEFAULT ??= "multi-dtb"
 
 # Default serial console for QCOM devices
 SERIAL_CONSOLES ?= "115200;ttyMSM0"
@@ -53,3 +65,31 @@ EFI_LINUX_IMG ?= "linux-${MACHINE}.efi"
 # modular boot setups, secure boot workflows, and reducing image size.
 # The -B 8 option enforces 8-byte alignment, as per QCOM UEFI requirements.
 FIT_DTB_MKIMAGE_EXTRA_OPTS ?= "-E -B 8"
+
+# Default values (machines override these)
+QCOM_RT_CPU           ?= ""
+QCOM_IRQAFF           ?= ""
+QCOM_RCU_NOCBS        ?= ""
+QCOM_RCU_EXPEDITED    ?= ""
+QCOM_CPUIDLE_OFF      ?= ""
+
+# Per-arg conditionals
+RT_ARGS_ISOL  = "${@oe.utils.conditional('QCOM_RT_CPU',        '', '', \
+                'isolcpus=${QCOM_RT_CPU}',              d)}"
+RT_ARGS_IRQ   = "${@oe.utils.conditional('QCOM_IRQAFF',        '', '', \
+                'irqaffinity=${QCOM_IRQAFF}',           d)}"
+RT_ARGS_NOCBS = "${@oe.utils.conditional('QCOM_RCU_NOCBS',     '', '', \
+                'rcu_nocbs=${QCOM_RCU_NOCBS}',          d)}"
+RT_ARGS_EXP   = "${@oe.utils.conditional('QCOM_RCU_EXPEDITED', '', '', \
+                'rcupdate.rcu_expedited=${QCOM_RCU_EXPEDITED}', d)}"
+RT_ARGS_IDLE  = "${@oe.utils.conditional('QCOM_CPUIDLE_OFF',   '', '', \
+                'cpuidle.off=${QCOM_CPUIDLE_OFF}',      d)}"
+
+# Combine
+RT_KERNEL_CMDLINE = "${RT_ARGS_ISOL} ${RT_ARGS_IRQ} ${RT_ARGS_NOCBS} \
+                     ${RT_ARGS_EXP} ${RT_ARGS_IDLE}"
+
+# Append only when RT kernel is selected
+KERNEL_CMDLINE_EXTRA:append = "${@bb.utils.contains_any('PREFERRED_PROVIDER_virtual/kernel',\
+                              'linux-qcom-rt linux-qcom-next-rt', \
+                              ' ${RT_KERNEL_CMDLINE}', '', d)}"

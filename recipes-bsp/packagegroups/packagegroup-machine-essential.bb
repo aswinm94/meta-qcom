@@ -6,7 +6,9 @@ PACKAGES = " \
     ${PN}-board-generic \
     ${PN}-qcom-generic \
     ${PN}-qcom-hamoa-soc \
+    ${PN}-qcom-purwa-soc \
     ${PN}-qcom-qcm2290-soc \
+    ${PN}-qcom-qcs615-soc \
     ${PN}-qcom-qcs6490-soc \
     ${PN}-qcom-qcs8300-soc \
     ${PN}-qcom-qcs9100-soc \
@@ -114,12 +116,44 @@ RRECOMMENDS:${PN}-qcom-hamoa-soc += " \
     kernel-module-videocc-sm8550 \
 "
 
+RRECOMMENDS:${PN}-qcom-purwa-soc += " \
+    ${PN}-board-generic \
+    ${PN}-qcom-generic \
+    kernel-module-ath11k-pci \
+    kernel-module-ath12k \
+    kernel-module-camcc-x1p42100 \
+    kernel-module-dispcc-x1e80100 \
+    kernel-module-gpucc-x1p42100 \
+    kernel-module-lpasscc-sc8280xp \
+    kernel-module-pinctrl-sm8550-lpass-lpi \
+    kernel-module-pmic-glink \
+    kernel-module-pmic-glink-altmode \
+    kernel-module-pwrseq-qcom-wcn \
+    kernel-module-snd-soc-wcd938x \
+    kernel-module-snd-soc-wsa884x \
+    kernel-module-snd-soc-x1e80100 \
+    kernel-module-tscrcc-x1e80100 \
+    kernel-module-videocc-x1p42100 \
+"
+
 RRECOMMENDS:${PN}-qcom-qcm2290-soc += " \
     ${PN}-board-generic \
     ${PN}-qcom-generic \
     kernel-module-ath10k-snoc \
     kernel-module-dispcc-qcm2290 \
     kernel-module-gpucc-qcm2290 \
+"
+
+RRECOMMENDS:${PN}-qcom-qcs615-soc += " \
+    ${PN}-board-generic \
+    ${PN}-qcom-generic \
+    kernel-module-ath11k-pci \
+    kernel-module-camcc-qcs615 \
+    kernel-module-dispcc-qcs615 \
+    kernel-module-gpucc-qcs615 \
+    kernel-module-pwrseq-qcom-wcn \
+    kernel-module-stmmac-platform \
+    kernel-module-videocc-qcs615 \
 "
 
 RRECOMMENDS:${PN}-qcom-qcs6490-soc += " \

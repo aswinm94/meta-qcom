@@ -6,13 +6,12 @@ inherit image_types
 IMAGE_TYPES += "qcomflash"
 
 QCOM_BOOT_FIRMWARE ?= ""
+PREFERRED_PROVIDER_virtual/qcom-capsule-firmware ?= ""
+QCOM_CAPSULE_FIRMWARE ?= "${PREFERRED_PROVIDER_virtual/qcom-capsule-firmware}"
 
 QCOM_ESP_IMAGE ?= "${@bb.utils.contains("MACHINE_FEATURES", "efi", "esp-qcom-image", "", d)}"
 QCOM_ESP_FILE ?= "${@'${DEPLOY_DIR_IMAGE}/${QCOM_ESP_IMAGE}-${MACHINE}${IMAGE_NAME_SUFFIX}.vfat' if d.getVar('QCOM_ESP_IMAGE') else ''}"
 
-# When not specified, assume the board supports FIT-based
-# multi-DTB and mention this as the default DTB to be flashed.
-QCOM_DTB_DEFAULT ?= "multi-dtb"
 QCOM_DTB_FILE ?= "dtb.bin"
 
 QCOM_BOOT_FILES_SUBDIR ?= ""
@@ -29,7 +28,8 @@ do_image_qcomflash[dirs] = "${QCOMFLASH_DIR}"
 do_image_qcomflash[cleandirs] = "${QCOMFLASH_DIR}"
 do_image_qcomflash[depends] += "${@ ['', '${QCOM_PARTITION_CONF}:do_deploy'][d.getVar('QCOM_PARTITION_CONF') != '']} \
                                 ${@ ['', '${QCOM_BOOT_FIRMWARE}:do_deploy'][d.getVar('QCOM_BOOT_FIRMWARE') != '']} \
-                                virtual/kernel:do_deploy \
+                                ${@ ['', '${QCOM_CAPSULE_FIRMWARE}:do_deploy'][d.getVar('QCOM_CAPSULE_FIRMWARE') != '']} \
+                                pigz-native:do_populate_sysroot virtual/kernel:do_deploy \
 				${@'virtual/bootloader:do_deploy' if d.getVar('PREFERRED_PROVIDER_virtual/bootloader') else  ''} \
 				${@'${QCOM_ESP_IMAGE}:do_image_complete' if d.getVar('QCOM_ESP_IMAGE') != '' else  ''} \
 				${@'abl2esp:do_deploy' if d.getVar('ABL_SIGNATURE_VERSION') else  ''}"
@@ -97,12 +97,16 @@ create_qcomflash_pkg() {
 
         # boot firmware
         for bfw in `find ${DEPLOY_DIR_IMAGE}/${QCOM_BOOT_FILES_SUBDIR} -maxdepth 1 -type f \
-                \( -name '*.elf' ! -name 'abl2esp*.elf' ! -name 'xbl_config*.elf' \) -o \
+                \( -name '*.elf' ! -name 'abl2esp*.elf' ! -name 'xbl_config*.elf' ! -name 'uefi.elf' \) -o \
                 -name '*.mbn*' -o \
+                -name '*.melf*' -o \
                 -name '*.fv' -o \
                 -name 'cdt_*.bin' -o \
                 -name 'logfs_*.bin' -o \
-                -name 'sec.dat'` ; do
+                -name 'qsahara_*.xml' -o \
+                -name 'sec.dat' -o \
+                -name 'soccp*.bin' -o \
+                -name 'xbl_config_devprg.elf'` ; do
             install -m 0644 ${bfw} .
         done
 
@@ -112,8 +116,25 @@ create_qcomflash_pkg() {
             xbl_config="xbl_config_kvm.elf"
         fi
 
-        if [ -f "${DEPLOY_DIR_IMAGE}/${QCOM_BOOT_FILES_SUBDIR}/${xbl_config}" ]; then
+        # Prefer the OEM-cert-injected xbl_config deployed by the capsule recipe
+        # when available.
+        if [ -n "${QCOM_CAPSULE_FIRMWARE}" ] && \
+                [ -f "${DEPLOY_DIR_IMAGE}/xbl_config-with-oem-cert.elf" ]; then
+            install -m 0644 "${DEPLOY_DIR_IMAGE}/xbl_config-with-oem-cert.elf" xbl_config.elf
+        elif [ -f "${DEPLOY_DIR_IMAGE}/${QCOM_BOOT_FILES_SUBDIR}/${xbl_config}" ]; then
             install -m 0644 "${DEPLOY_DIR_IMAGE}/${QCOM_BOOT_FILES_SUBDIR}/${xbl_config}" xbl_config.elf
+        fi
+
+        # bootloader selection
+        bootloader_bin="${DEPLOY_DIR_IMAGE}/${QCOM_BOOT_FILES_SUBDIR}/uefi.elf"
+        bootloader_provider='${PREFERRED_PROVIDER_virtual/bootloader}'
+        case "$bootloader_provider" in
+            u-boot*)
+                bootloader_bin="${DEPLOY_DIR_IMAGE}/u-boot-${UBOOT_CONFIG_DEFAULT}.mbn"
+                ;;
+        esac
+        if [ -f "${bootloader_bin}" ]; then
+            install -m 0644 "${bootloader_bin}" uefi.elf
         fi
 
         # sail nor firmware
@@ -152,12 +173,18 @@ create_qcomflash_pkg() {
         install -m 0644 "${DEPLOY_DIR_IMAGE}/abl2esp-${ABL_SIGNATURE_VERSION}.elf" .
     fi
 
+    # capsule image
+    if [ -n "${QCOM_CAPSULE_FIRMWARE}" ] && \
+            [ -f "${DEPLOY_DIR_IMAGE}/${QCOM_CAPSULE_FIRMWARE}.cap" ]; then
+        install -m 0644 "${DEPLOY_DIR_IMAGE}/${QCOM_CAPSULE_FIRMWARE}.cap" .
+    fi
+
     # Create symlink to ${QCOMFLASH_DIR} dir
     ln -rsf ${QCOMFLASH_DIR} ${IMGDEPLOYDIR}/${IMAGE_LINK_NAME}.qcomflash
 
     # Create qcomflash tarball
-    ${IMAGE_CMD_TAR} --sparse --numeric-owner --transform="s,^\./,${IMAGE_BASENAME}-${MACHINE}/," -cf- . | gzip -f -9 -n -c --rsyncable > ${IMGDEPLOYDIR}/${IMAGE_NAME}.qcomflash.tar.gz
+    ${IMAGE_CMD_TAR} --sparse --numeric-owner --transform="s,^\./,${IMAGE_BASENAME}-${MACHINE}/," -cf- . | pigz -p ${BB_NUMBER_THREADS} -9 -n --rsyncable > ${IMGDEPLOYDIR}/${IMAGE_NAME}.qcomflash.tar.gz
     ln -sf ${IMAGE_NAME}.qcomflash.tar.gz ${IMGDEPLOYDIR}/${IMAGE_LINK_NAME}.qcomflash.tar.gz
 }
 
-create_qcomflash_pkg[vardepsexclude] += "DATETIME"
+create_qcomflash_pkg[vardepsexclude] += "BB_NUMBER_THREADS DATETIME"

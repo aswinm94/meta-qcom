@@ -4,10 +4,11 @@ COMPATIBLE_MACHINE:qcom = "(qcom)"
 FILESEXTRAPATHS:prepend:qcom := "${THISDIR}/${PN}:"
 
 SRC_URI:append:qcom = " \
-    file://qcm6490-board-dts/0001-arm64-dts-qcom-qcs6490-rb3gen2-Add-TC9563-PCIe-switc.patch \
     file://qcm6490-board-dts/0001-PENDING-enable-xHCI.patch \
     file://workarounds/0001-QCLINUX-arm64-dts-qcom-qcm6490-disable-sdhc1-for-ufs.patch \
     file://workarounds/0001-PENDING-arm64-dts-qcom-Remove-voltage-vote-support-f.patch \
+    file://monaco-evk-dts/0001-arm64-dts-qcom-monaco-evk-camera-Add-DT-overlay.patch \
+    file://hamoa-iot-evk-dts/0001-arm64-dts-qcom-hamoa-iot-evk-camera-imx577-Add-DT-ov.patch \
 "
 
 # Include additional kernel configs.

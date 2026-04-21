@@ -2,6 +2,10 @@ inherit allarch
 
 FILES:${PN} += "${nonarch_base_libdir}/firmware/"
 
+# Firmware files are pre-compiled, pre-stripped, and not target architecture executables.
+# Skipping QA checks: 'already-stripped', 'arch' because:
+# - Firmware is not AArch64 ELF (arch check fails)
+# - file is Pre-stripped  (already-stripped)
 INSANE_SKIP:${PN} += "arch already-stripped"
 
 # Default settings
@@ -29,7 +33,7 @@ FILES:linux-firmware-qcom-${FW_QCOM_NAME}-ipa = "${FW_QCOM_PATH}/ipa_fws.mbn* ${
 FILES:linux-firmware-qcom-${FW_QCOM_NAME}-modem = "${FW_QCOM_PATH}/mba.mbn* ${FW_QCOM_PATH}/modem.mbn* ${FW_QCOM_PATH}/modem*.jsn"
 FILES:linux-firmware-qcom-${FW_QCOM_NAME}-q6 = "${FW_QCOM_PATH}/q6.mbn*"
 FILES:linux-firmware-qcom-${FW_QCOM_NAME}-sensors = "${FW_QCOM_PATH}/slpi.mbn* ${FW_QCOM_PATH}/slpi*.jsn"
-FILES:linux-firmware-qcom-${FW_QCOM_NAME}-venus = "${FW_QCOM_PATH}/venus.mbn* ${FW_QCOM_PATH}/vidc*"
+FILES:linux-firmware-qcom-${FW_QCOM_NAME}-venus = "${FW_QCOM_PATH}/venus.mbn* ${FW_QCOM_PATH}/vidc* ${FW_QCOM_BASE_PATH}/vpu*"
 FILES:linux-firmware-qcom-${FW_QCOM_NAME}-wifi = "${FW_QCOM_PATH}/wcnss.mbn* ${FW_QCOM_PATH}/wlanmdsp.mbn*"
 
 # Possible values are "xz" and "zst".
@@ -67,3 +71,9 @@ do_install:append() {
 INHIBIT_PACKAGE_DEBUG_SPLIT = "1"
 INHIBIT_PACKAGE_STRIP = "1"
 INHIBIT_DEFAULT_DEPS = "1"
+
+# These pkgs are empty and when present will be pulled into SDK
+# by default and cause license conflits, so don't generate them.
+PACKAGES:remove = "${PN}-dbg"
+PACKAGES:remove = "${PN}-dev"
+PACKAGES:remove = "${PN}-staticdev"

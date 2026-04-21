@@ -8,12 +8,14 @@ inherit kernel cml1
 
 COMPATIBLE_MACHINE = "(qcom)"
 
-LINUX_VERSION ?= "6.18"
+LINUX_VERSION ?= "6.18.21"
 
 PV = "${LINUX_VERSION}"
 
-# tag: qcom-6.18.y-20260128
-SRCREV ?= "cdc4617fae333fe78b4375c00f48f047a6129f81"
+FILESEXTRAPATHS:prepend := "${THISDIR}/linux-qcom-6.18:"
+
+# tag:qcom-6.18.y-20260419
+SRCREV ?= "2f43e5abac7c92e736109e693fd376fa033fe1ef"
 
 SRCBRANCH ?= "nobranch=1"
 SRCBRANCH:class-devupstream ?= "branch=qcom-6.18.y"
@@ -41,6 +43,7 @@ KBUILD_CONFIG_EXTRA = "${@bb.utils.contains('DISTRO_FEATURES', 'hardened', '${S}
 KBUILD_CONFIG_EXTRA:append:aarch64 = " ${S}/arch/arm64/configs/prune.config"
 KBUILD_CONFIG_EXTRA:append:aarch64 = " ${S}/arch/arm64/configs/qcom.config"
 KBUILD_CONFIG_EXTRA:append = " ${@oe.utils.vartrue('DEBUG_BUILD', '${S}/kernel/configs/debug.config', '', d)}"
+KBUILD_CONFIG_EXTRA:append:aarch64 = " ${@oe.utils.vartrue('DEBUG_BUILD', '${S}/arch/arm64/configs/qcom_debug.config', '', d)}"
 
 do_configure:prepend() {
     # Use a copy of the 'defconfig' from the actual repo to merge fragments

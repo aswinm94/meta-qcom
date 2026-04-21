@@ -19,6 +19,7 @@ jobs:
         machine:
           - iq-8275-evk
           - iq-9075-evk
+          - iq-x7181-evk
           - qcm6490-idp
           - qcs615-ride
           - rb3gen2-core-kit
@@ -28,18 +29,28 @@ jobs:
           - qcom-armv7a
           - rb1-core-kit
         distro:
-          - name: poky-altcfg
+          - name: nodistro
           - name: qcom-distro
+        kernel:
+          - ""
+          - _linux-qcom-6.18
+        exclude:
+          - distro: nodistro
+            kernel: _linux-qcom-6.18
+          - machine: qcom-armv7a
+            kernel: _linux-qcom-6.18
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Run lava-test-plans
         uses: ./.github/actions/lava-test-plans
         with:
           machine: ${{ matrix.machine }}
           distro_name: ${{ matrix.distro.name }}
+          kernel: ${{ matrix.kernel }}
           build_id: ${{ inputs.build_id }}
           gh_token: ${{ secrets.GITHUB_TOKEN }}
           prefix: boottest
@@ -50,21 +61,17 @@ jobs:
     outputs:
       jobmatrix: ${{ steps.listjobs.outputs.jobmatrix }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-
-      - name: 'Download job templates'
-        uses: actions/download-artifact@v6
-        with:
-          pattern: boottest-*
+          persist-credentials: false
 
       - name: "List jobs"
         id: listjobs
         uses: ./.github/actions/list-jobs
         with:
           prefix: "boottest"
-          build_id: ${{ inputs.build_id }}
+          build_id: ${{ github.run_id }}
           gh_token: ${{ secrets.GITHUB_TOKEN }}
 
   submit-boot-job:
@@ -76,14 +83,14 @@ jobs:
       matrix: ${{ fromJson(needs.prepare-boot-job-list.outputs.jobmatrix) }}
     steps:
       - name: 'Download job templates'
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
-          pattern: boottest-*
+          name: ${{ matrix.target.artifact }}
 
       - name: Submit ${{ matrix.target.name }}
         timeout-minutes: 20
         id: submit
-        uses: foundriesio/lava-action@v9
+        uses: foundriesio/lava-action@v11
         with:
           lava_token: ${{ secrets.LAVATOKEN }}
           lava_url: 'lava.infra.foundries.io'
@@ -94,7 +101,7 @@ jobs:
           save_result_as_artifact: true
           save_job_details: true
           result_file_name: "${{ matrix.target.result_file }}"
-      - uses: mwasilew/github-action-matrix-outputs-write@v2
+      - uses: mwasilew/github-action-matrix-outputs-write@f7202d2224ebed937f287a2e2813e47fddd12bc8 # v2
         if: always()
         id: out
         with:
@@ -111,7 +118,7 @@ jobs:
     outputs:
       boot_result: "${{ steps.print-boot-result.outputs.boot_result }}"
     steps:
-      - uses: cloudposse/github-action-matrix-outputs-read@v1
+      - uses: cloudposse/github-action-matrix-outputs-read@33cac12fa9282a7230a418d859b93fdbc4f27b5a # v1
         id: read
         with:
           matrix-step-name: "submit-boot-job"
@@ -144,8 +151,14 @@ jobs:
           - qcs9100-ride-sx
           - rb1-core-kit
         distro:
-          - name: poky-altcfg
+          - name: nodistro
           - name: qcom-distro
+        kernel:
+          - ""
+          - _linux-qcom-6.18
+        exclude:
+          - distro: nodistro
+            kernel: _linux-qcom-6.18
     steps:
       - id: print-condition
         name: "Print condition"
@@ -154,15 +167,17 @@ jobs:
         run: |
           echo "${RESULT}"
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Run lava-test-plans
         uses: ./.github/actions/lava-test-plans
         with:
           machine: ${{ matrix.machine }}
           distro_name: ${{ matrix.distro.name }}
+          kernel: ${{ matrix.kernel }}
           build_id: ${{ inputs.build_id }}
           gh_token: ${{ secrets.GITHUB_TOKEN }}
           prefix: premerge
@@ -174,20 +189,17 @@ jobs:
     outputs:
       jobmatrix: ${{ steps.listjobs.outputs.jobmatrix }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - name: 'Download job templates'
-        uses: actions/download-artifact@v6
-        with:
-          pattern: premerge-*
+          persist-credentials: false
 
       - name: "List jobs"
         id: listjobs
         uses: ./.github/actions/list-jobs
         with:
           prefix: "premerge"
-          build_id: ${{ inputs.build_id }}
+          build_id: ${{ github.run_id }}
           gh_token: ${{ secrets.GITHUB_TOKEN }}
 
   submit-premerge-job:
@@ -199,13 +211,13 @@ jobs:
       matrix: ${{ fromJson(needs.prepare-premerge-job-list.outputs.jobmatrix) }}
     steps:
       - name: 'Download job templates'
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
-          pattern: premerge-*
+          name: ${{ matrix.target.artifact}}
 
       - name: Submit ${{ matrix.target.name }}
         timeout-minutes: 20
-        uses: foundriesio/lava-action@v9
+        uses: foundriesio/lava-action@v11
         with:
           lava_token: ${{ secrets.LAVATOKEN }}
           lava_url: 'lava.infra.foundries.io'
@@ -232,9 +244,10 @@ jobs:
       summary_id: ${{ steps.generate-summary.outputs.artifact_id }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Generate Summary
         id: generate-summary
@@ -245,7 +258,7 @@ jobs:
           summary_file_name: test_job_summary
 
       - name: Download Summary
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           artifact-ids: ${{ steps.generate-summary.outputs.artifact_id }}
 
