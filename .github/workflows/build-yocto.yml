@@ -243,6 +243,9 @@ jobs:
           - type: rt-6.18-distro-kvm
             dirname: "_linux-qcom-rt-6.18_qcom-distro-kvm"
             yamlfile: ":ci/linux-qcom-rt-6.18.yml:ci/qcom-distro-kvm.yml"
+          - type: u-boot-qcom-6.18
+            dirname: "_linux-qcom-6.18_u-boot-qcom"
+            yamlfile: ":ci/linux-qcom-6.18.yml:ci/u-boot-qcom.yml"
         exclude:
           # Exclude jobs from compile_warm_up
           - machine: glymur-crd
@@ -275,6 +278,47 @@ jobs:
                 name: qcom-distro
             kernel:
                 type: default
+          # Exclude u-boot-qcom-6.18 kernel for machines that don't support U-Boot
+          - kernel:
+              type: u-boot-qcom-6.18
+            machine: glymur-crd
+          - kernel:
+              type: u-boot-qcom-6.18
+            machine: iq-8275-evk
+          - kernel:
+              type: u-boot-qcom-6.18
+            machine: iq-x5121-evk
+          - kernel:
+              type: u-boot-qcom-6.18
+            machine: iq-x7181-evk
+          - kernel:
+              type: u-boot-qcom-6.18
+            machine: kaanapali-mtp
+          - kernel:
+              type: u-boot-qcom-6.18
+            machine: qcm6490-idp
+          - kernel:
+              type: u-boot-qcom-6.18
+            machine: qcs8300-ride-sx
+          - kernel:
+              type: u-boot-qcom-6.18
+            machine: qcs9100-ride-sx
+          - kernel:
+              type: u-boot-qcom-6.18
+            machine: sm8750-mtp
+          # Exclude u-boot-qcom-6.18 with distros other than nodistro and qcom-distro
+          - kernel:
+              type: u-boot-qcom-6.18
+            distro:
+              name: qcom-distro-catchall
+          - kernel:
+              type: u-boot-qcom-6.18
+            distro:
+              name: debug
+          - kernel:
+              type: u-boot-qcom-6.18
+            distro:
+              name: performance
         include:
           # Additional builds for specific machines
           - machine: qcom-armv8a
@@ -349,38 +393,6 @@ jobs:
                 type: default
                 dirname: ""
                 yamlfile: ""
-          - machine: qcs615-ride
-            distro:
-                name: nodistro
-                yamlfile: ''
-            kernel:
-                type: u-boot-qcom-6.18
-                dirname: "_linux-qcom-6.18_u-boot-qcom"
-                yamlfile: ":ci/linux-qcom-6.18.yml:ci/u-boot-qcom.yml"
-          - machine: rb3gen2-core-kit
-            distro:
-                name: nodistro
-                yamlfile: ''
-            kernel:
-                type: u-boot-qcom-6.18
-                dirname: "_linux-qcom-6.18_u-boot-qcom"
-                yamlfile: ":ci/linux-qcom-6.18.yml:ci/u-boot-qcom.yml"
-          - machine: iq-9075-evk
-            distro:
-                name: nodistro
-                yamlfile: ''
-            kernel:
-                type: u-boot-qcom-6.18
-                dirname: "_linux-qcom-6.18_u-boot-qcom"
-                yamlfile: ":ci/linux-qcom-6.18.yml:ci/u-boot-qcom.yml"
-          - machine: iq-615-evk
-            distro:
-                name: nodistro
-                yamlfile: ''
-            kernel:
-                type: u-boot-qcom-6.18
-                dirname: "_linux-qcom-6.18_u-boot-qcom"
-                yamlfile: ":ci/linux-qcom-6.18.yml:ci/u-boot-qcom.yml"
           - machine: rb3gen2-core-kit-open-fw
             distro:
                 name: qcom-distro-kvm
