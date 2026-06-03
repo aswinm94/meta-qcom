@@ -8,20 +8,24 @@ inherit kernel cml1
 
 COMPATIBLE_MACHINE = "(qcom)"
 
-LINUX_VERSION ?= "6.18.21"
+LINUX_QCOM_FIT_DTB_COMPATIBLE = "conf/machine/include/fit-dtb-compatible-linux-qcom.inc"
+
+LINUX_VERSION ?= "6.18.30"
 
 PV = "${LINUX_VERSION}"
 
 FILESEXTRAPATHS:prepend := "${THISDIR}/linux-qcom-6.18:"
 
-# tag:qcom-6.18.y-20260419
-SRCREV ?= "2f43e5abac7c92e736109e693fd376fa033fe1ef"
+# tag:qcom-6.18.y-20260601
+SRCREV ?= "b7cce9a3884a873855693af8591d4c9c469cd17e"
 
 SRCBRANCH ?= "nobranch=1"
 SRCBRANCH:class-devupstream ?= "branch=qcom-6.18.y"
 
-SRC_URI = "git://github.com/qualcomm-linux/kernel.git;${SRCBRANCH};protocol=https"
-SRC_URI += "file://0001-tools-use-basename-to-identify-file-in-gen-mach-type.patch"
+SRC_URI = " \
+    git://github.com/qualcomm-linux/kernel.git;${SRCBRANCH};protocol=https \
+    file://0001-tools-use-basename-to-identify-file-in-gen-mach-type.patch \
+"
 
 # Additional kernel configs.
 SRC_URI += " \

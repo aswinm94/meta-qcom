@@ -8,12 +8,14 @@ inherit kernel cml1
 
 COMPATIBLE_MACHINE = "(qcom)"
 
-LINUX_VERSION ?= "6.19+7.0-rc6"
+LINUX_QCOM_FIT_DTB_COMPATIBLE = "conf/machine/include/fit-dtb-compatible-linux-qcom.inc"
+
+LINUX_VERSION ?= "7.0+7.1-rc4"
 
 PV = "${LINUX_VERSION}+git"
 
-# tag: qcom-next-7.0-rc6-20260416
-SRCREV ?= "aa085abae3ad03a0b6e379734665e3d7d8266076"
+# tag: qcom-next-7.1-rc4-20260601
+SRCREV ?= "35618f1ce354e04eafa1fde7fae8f93cb884d7da"
 
 SRCBRANCH ?= "nobranch=1"
 SRCBRANCH:class-devupstream ?= "branch=qcom-next"

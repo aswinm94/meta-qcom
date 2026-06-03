@@ -5,6 +5,10 @@ header:
 
 distro: qcom-distro
 
+defaults:
+  repos:
+    branch: master
+
 repos:
   meta-qcom-distro:
     url: https://github.com/qualcomm-linux/meta-qcom-distro
@@ -12,7 +16,10 @@ repos:
 
   meta-openembedded:
     url: https://github.com/openembedded/meta-openembedded
-    branch: master
+    patches:
+      plain:
+        repo: meta-qcom
+        path: patches/meta-oe/0001-mariadb-fix-building-for-the-ARMv8.3-A-and-later-sys.patch
     layers:
       meta-filesystems:
       meta-gnome:
@@ -24,23 +31,18 @@ repos:
 
   meta-virtualization:
     url: https://git.yoctoproject.org/git/meta-virtualization
-    branch: master
 
   meta-audioreach:
     url: https://github.com/AudioReach/meta-audioreach
-    branch: master
 
   meta-selinux:
-    branch: master
     url: https://git.yoctoproject.org/meta-selinux
 
   meta-updater:
-    branch: master
     url: https://github.com/uptane/meta-updater
 
   meta-security:
     url: https://git.yoctoproject.org/meta-security
-    branch: master
     layers:
       .:
       meta-tpm:
@@ -53,3 +55,4 @@ target:
   - qcom-multimedia-image
   - qcom-multimedia-proprietary-image
   - qcom-container-orchestration-image
+  - qcom-networking-image

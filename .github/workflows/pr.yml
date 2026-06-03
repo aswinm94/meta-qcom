@@ -1,11 +1,14 @@
 name: Build on PR
+run-name: "${{ github.base_ref }}: ${{ github.event.pull_request.title }}"
 
 on:
   pull_request:
+    branches:
+      - master
+      - wrynose
     paths-ignore:
-      - 'README.md'
-      - 'README'
-      - 'SECURITY.md'
+      - '**/*.md'
+      - '.github/.markdownlint.yaml'
 
 permissions:
   checks: write

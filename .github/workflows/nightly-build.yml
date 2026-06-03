@@ -1,11 +1,13 @@
 name: Nightly Build
+run-name: "Nightly Build (${{ github.ref_name }})"
 
 on:
+  workflow_dispatch:
   schedule:
   # NOTE - changes to the cron spec should be pushed by https://github.com/quic-yocto-ci
   # so that build notification emails will be sent out properly.
-  # At 8:22 & 20:22 UTC everyday - picked a random "minute" as top of hour can be busy in github
-  - cron: "22 8,20 * * *"
+  # At 0:22 UTC everyday - picked a random "minute" as top of hour can be busy in github
+  - cron: "22 0 * * *"
 
 permissions:
   checks: write
@@ -16,15 +18,20 @@ permissions:
 jobs:
   build-nightly:
     uses: ./.github/workflows/build-yocto.yml
+    with:
+      skip_if_github_cached: true
+    secrets: inherit
   test-nightly:
+    if: needs.build-nightly.outputs.build_skipped != 'true'
     uses: ./.github/workflows/test.yml
     needs: build-nightly
     secrets: inherit
     with:
       build_id: ${{ github.run_id }}
   publish-test-results:
+    if: needs.build-nightly.outputs.build_skipped != 'true'
     uses: ./.github/workflows/publish-results.yml
-    needs: test-nightly
+    needs: [build-nightly, test-nightly]
     secrets: inherit
     with:
       workflow_id: ${{ github.run_id }}

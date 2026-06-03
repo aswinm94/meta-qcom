@@ -5,19 +5,16 @@ DEPENDS += "bc-native dtc-native gnutls-native python3-pyelftools-native qtestsi
 
 COMPATIBLE_MACHINE:aarch64 = "(qcom)"
 
-PV = "2026.01+2026.04-rc1+git"
+PV = "2026.04+2026.07-rc2+git"
 
-SRCREV ?= '${@oe.utils.conditional("PREFERRED_PROVIDER_virtual/bootloader", "u-boot-qcom-upstream", "${AUTOREV}", "7b9fb537f19db0fa48b824ecc883c9c8512f0e21", d)}'
-
+SRCREV = "41744cd6a4da3fd0054fad8e7c6e8d8d5bd20c33"
 SRCBRANCH = "nobranch=1"
-SRCBRANCH:class-devupstream = "branch=qcom-next"
 
 SRC_URI = "git://github.com/qualcomm-linux/u-boot.git;${SRCBRANCH};protocol=https;name=uboot"
-
-# To build tip of qcom-next branch set preferred
-# virtual/bootloader provider to 'u-boot-qcom-upstream'
-BBCLASSEXTEND = "devupstream:target"
-PN:class-devupstream = "u-boot-qcom-upstream"
+SRC_URI += " \
+    file://disable-eficapsule-tool.cfg \
+    ${@bb.utils.contains('MACHINE_FEATURES', 'optee', 'file://tfa-optee.cfg', '', d)} \
+"
 
 python __anonymous() {
     ubootconfig = (d.getVar('UBOOT_CONFIG') or "").split()
